@@ -1,0 +1,19 @@
+{
+  "include": ["."],
+  "exclude": [
+    ".venv",
+    "frontend",
+    "__pycache__",
+    "node_modules"
+  ],
+  "venvPath": ".",
+  "venv": ".venv",
+  "pythonVersion": "3.11",
+  "typeCheckingMode": "basic",
+  "reportMissingImports": "none",
+  "reportMissingModuleSource": "none",
+  "reportOptionalIterable": "none",
+  "reportGeneralTypeIssues": "none",
+  "reportIndexIssue": "none",
+  "reportOperatorIssue": "none"
+}

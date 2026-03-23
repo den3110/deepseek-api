@@ -1,0 +1,8 @@
+.venv
+.git
+__pycache__
+api_keys.db
+frontend/node_modules
+*.pyc
+*.pyo
+.env

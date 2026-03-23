@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  deepseek-server:
+    build: .
+    container_name: deepseek-server
+    ports:
+      - "5024:5024"
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    restart: unless-stopped

@@ -1,0 +1,134 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap");
+
+body {
+  margin: 0;
+  font-family:
+    "Inter",
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+  height: 100vh;
+}
+
+#root {
+  height: 100vh;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Markdown styling inside messages */
+.markdown-content p {
+  margin-bottom: 10px;
+}
+.markdown-content p:last-child {
+  margin-bottom: 0;
+}
+.markdown-content pre {
+  background: #0d0d12;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 14px;
+  overflow-x: auto;
+  margin: 10px 0;
+}
+.markdown-content code {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 13px;
+}
+.markdown-content :not(pre) > code {
+  background: rgba(255, 255, 255, 0.06);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12.5px;
+}
+.markdown-content ul,
+.markdown-content ol {
+  padding-left: 22px;
+  margin: 6px 0;
+}
+.markdown-content li {
+  margin-bottom: 4px;
+}
+.markdown-content h1 {
+  font-size: 20px;
+  margin: 14px 0 8px;
+}
+.markdown-content h2 {
+  font-size: 17px;
+  margin: 12px 0 6px;
+}
+.markdown-content h3 {
+  font-size: 15px;
+  margin: 10px 0 6px;
+}
+.markdown-content blockquote {
+  border-left: 3px solid rgba(255, 255, 255, 0.15);
+  padding-left: 14px;
+  color: #999;
+  margin: 8px 0;
+}
+.markdown-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 10px 0;
+}
+.markdown-content th,
+.markdown-content td {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 8px 12px;
+  text-align: left;
+  font-size: 13px;
+}
+.markdown-content th {
+  background: rgba(255, 255, 255, 0.04);
+}
+.markdown-content hr {
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin: 14px 0;
+}
+.markdown-content strong {
+  font-weight: 600;
+}
+
+/* Loading dots animation */
+@keyframes bounce {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-6px);
+  }
+}
+.loading-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #7c4dff;
+  display: inline-block;
+  margin: 0 2px;
+  animation: bounce 1.2s infinite;
+}
+.loading-dot:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.loading-dot:nth-child(3) {
+  animation-delay: 0.3s;
+}
