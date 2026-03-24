@@ -211,6 +211,11 @@ class DeepSeekAPI:
                         continue
 
                 # Handle other response codes
+                if response.status_code == 400 and ("pow" in response.text.lower() or "challenge" in response.text.lower()):
+                    print(f"\033[93mWarning: PoW challenge failed. Retrying...\033[0m", file=sys.stderr)
+                    if retry_count < max_retries - 1:
+                        retry_count += 1
+                        continue
                 if response.status_code == 401:
                     raise AuthenticationError("Invalid or expired authentication token")
                 elif response.status_code == 429:
@@ -276,35 +281,44 @@ class DeepSeekAPI:
 
         file_size = os.path.getsize(file_path)
 
-        # Get PoW challenge for upload endpoint
-        pow_response = self.pow_cache.get_solved('/api/v0/file/upload_file')
+        max_retries = 3
+        for attempt in range(max_retries):
+            # Get PoW challenge for upload endpoint
+            pow_response = self.pow_cache.get_solved('/api/v0/file/upload_file')
 
-        headers = {
-            'authorization': f'Bearer {self.auth_token}',
-            'origin': 'https://chat.deepseek.com',
-            'referer': 'https://chat.deepseek.com/',
-            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36',
-            'x-app-version': '20241129.1',
-            'x-client-locale': 'en_US',
-            'x-client-platform': 'web',
-            'x-client-version': '1.0.0-always',
-            'x-ds-pow-response': pow_response,
-            'x-file-size': str(file_size),
-        }
+            headers = {
+                'authorization': f'Bearer {self.auth_token}',
+                'origin': 'https://chat.deepseek.com',
+                'referer': 'https://chat.deepseek.com/',
+                'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36',
+                'x-app-version': '20241129.1',
+                'x-client-locale': 'en_US',
+                'x-client-platform': 'web',
+                'x-client-version': '1.0.0-always',
+                'x-ds-pow-response': pow_response,
+                'x-file-size': str(file_size),
+            }
 
-        filename = os.path.basename(file_path)
-        mime_type = mimetypes.guess_type(file_path)[0] or 'application/octet-stream'
+            filename = os.path.basename(file_path)
+            mime_type = mimetypes.guess_type(file_path)[0] or 'application/octet-stream'
 
-        with open(file_path, 'rb') as f:
-            response = std_requests.post(
-                f'{self.BASE_URL.replace("/api/v0", "")}/api/v0/file/upload_file',
-                headers=headers,
-                files={'file': (filename, f, mime_type)},
-                timeout=60
-            )
+            with open(file_path, 'rb') as f:
+                response = std_requests.post(
+                    f'{self.BASE_URL.replace("/api/v0", "")}/api/v0/file/upload_file',
+                    headers=headers,
+                    files={'file': (filename, f, mime_type)},
+                    timeout=60
+                )
 
-        if response.status_code != 200:
-            raise APIError(f"Upload failed: {response.text}", response.status_code)
+            if response.status_code != 200:
+                if response.status_code == 400 and ("pow" in response.text.lower() or "challenge" in response.text.lower()):
+                    print(f"  ⚠️ PoW failed during upload (attempt {attempt+1}/{max_retries})", file=sys.stderr)
+                    continue
+                raise APIError(f"Upload failed: {response.text}", response.status_code)
+                
+            break
+        else:
+            raise APIError("Upload failed after multiple PoW retry attempts")
 
         data = response.json()
         if data.get('code') != 0:
@@ -395,53 +409,60 @@ class DeepSeekAPI:
             'search_enabled': search_enabled,
         }
 
-        try:
-            # Get pre-solved PoW response (instant if cached, otherwise fetch+solve)
-            t0 = time.time()
-            pow_response = self.pow_cache.get_solved()
-            headers = self._get_headers(pow_response=pow_response)
-            t1 = time.time()
-            print(f"  ⏱️ PoW total: {t1-t0:.2f}s", file=sys.stderr)
-
-            # Use persistent session for Keep-Alive
-            response = self.session.post(
-                f"{self.BASE_URL}/chat/completion",
-                headers=headers,
-                json=json_data,
-                cookies=self.cookies,  # Add cookies
-                stream=True,
-                timeout=None
-            )
-
-            if response.status_code != 200:
-                error_text = next(response.iter_lines(), b'').decode('utf-8', 'ignore')
-                if response.status_code == 401:
-                    raise AuthenticationError("Invalid or expired authentication token")
-                elif response.status_code == 429:
-                    raise RateLimitError("API rate limit exceeded")
-                else:
-                    raise APIError(f"API request failed: {error_text}", response.status_code)
-
-            # We don't use iter_lines() because requests buffers it and causes multi-second delay.
-            # We read raw bytes from the stream to get SSE chunks instantly.
-            buffer = b''
-            for chunk in response.iter_content(chunk_size=128):
-                if chunk:
-                    buffer += chunk
-                    while b'\n' in buffer:
-                        line, buffer = buffer.split(b'\n', 1)
-                        if line:
-                            try:
-                                parsed = self._parse_chunk(line)
-                                if parsed:
-                                    yield parsed
-                                    if parsed.get('finish_reason') == 'stop':
-                                        return
-                            except Exception as e:
-                                raise APIError(f"Error parsing response chunk: {str(e)}")
-
-        except requests.exceptions.RequestException as e:
-            raise NetworkError(f"Network error occurred during streaming: {str(e)}")
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                # Get pre-solved PoW response (instant if cached, otherwise fetch+solve)
+                t0 = time.time()
+                pow_response = self.pow_cache.get_solved()
+                headers = self._get_headers(pow_response=pow_response)
+                t1 = time.time()
+                print(f"  ⏱️ PoW total: {t1-t0:.2f}s", file=sys.stderr)
+    
+                # Use persistent session for Keep-Alive
+                response = self.session.post(
+                    f"{self.BASE_URL}/chat/completion",
+                    headers=headers,
+                    json=json_data,
+                    cookies=self.cookies,  # Add cookies
+                    stream=True,
+                    timeout=None
+                )
+    
+                if response.status_code != 200:
+                    error_text = next(response.iter_lines(), b'').decode('utf-8', 'ignore')
+                    if response.status_code == 400 and ("pow" in error_text.lower() or "challenge" in error_text.lower()):
+                        print(f"  ⚠️ PoW failed during chat completion (attempt {attempt+1}/{max_retries}): {error_text}", file=sys.stderr)
+                        continue
+                    if response.status_code == 401:
+                        raise AuthenticationError("Invalid or expired authentication token")
+                    elif response.status_code == 429:
+                        raise RateLimitError("API rate limit exceeded")
+                    else:
+                        raise APIError(f"API request failed: {error_text}", response.status_code)
+    
+                # We don't use iter_lines() because requests buffers it and causes multi-second delay.
+                # We read raw bytes from the stream to get SSE chunks instantly.
+                buffer = b''
+                for chunk in response.iter_content(chunk_size=128):
+                    if chunk:
+                        buffer += chunk
+                        while b'\n' in buffer:
+                            line, buffer = buffer.split(b'\n', 1)
+                            if line:
+                                try:
+                                    parsed = self._parse_chunk(line)
+                                    if parsed:
+                                        yield parsed
+                                        if parsed.get('finish_reason') == 'stop':
+                                            return
+                                except Exception as e:
+                                    raise APIError(f"Error parsing response chunk: {str(e)}")
+                return # Successful completion, exit generator
+            except requests.exceptions.RequestException as e:
+                if attempt == max_retries - 1:
+                    raise NetworkError(f"Network error occurred during streaming: {str(e)}")
+        raise APIError("API request failed due to repeated PoW errors")
 
     def _parse_chunk(self, chunk: bytes) -> Optional[Dict[str, Any]]:
         """Parse a SSE chunk from the API response"""

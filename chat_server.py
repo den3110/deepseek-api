@@ -412,8 +412,15 @@ def openai_chat_completions():
             full_reasoning = ""
             last_msg_id = None
             thinking_enabled = (model == 'deepseek-reasoner')
+            print(f"  🖼️  ref_file_ids={ref_file_ids}", flush=True)
+            print(f"  📝 prompt length={len(prompt)}, session={session_id}, parent={parent_message_id}", flush=True)
+            print(f"  📝 prompt preview: {prompt[:200]}...", flush=True)
+            chunk_count = 0
             for chunk in (deepseek.chat_completion(session_id, prompt, parent_message_id=parent_message_id, thinking_enabled=thinking_enabled, ref_file_ids=ref_file_ids) or []):
                 if chunk:
+                    chunk_count += 1
+                    if chunk_count <= 5:
+                        print(f"  📦 chunk#{chunk_count}: type={chunk.get('type')} content_len={len(str(chunk.get('content','')))} keys={list(chunk.keys())}", flush=True)
                     if chunk.get('message_id'):
                         last_msg_id = chunk['message_id']
                         
@@ -423,6 +430,10 @@ def openai_chat_completions():
                         elif chunk.get('type') == 'text':
                             full_content += str(chunk['content'])  # type: ignore
             
+            print(f"  ✅ total chunks={chunk_count}, content_len={len(full_content)}, reasoning_len={len(full_reasoning)}", flush=True)
+            if not full_content:
+                print(f"  ⚠️  WARNING: DeepSeek returned EMPTY content!", flush=True)
+
             msg = {
                 "role": "assistant",
                 "content": full_content
@@ -452,6 +463,7 @@ def openai_chat_completions():
             }
             return jsonify(response_data)
         except Exception as e:
+            print(f"  ❌ non-stream error: {e}", flush=True)
             return jsonify({'error': {'message': str(e), 'type': 'api_error'}}), 500
 
 
