@@ -12,7 +12,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 
 # Install dependencies from requirements.txt and additional web frameworks
-RUN pip install --no-cache-dir -r requirements.txt flask flask-cors python-dotenv
+RUN pip install --no-cache-dir -r requirements.txt flask flask-cors python-dotenv gunicorn gevent
 
 # Copy the rest of the application
 COPY . .
@@ -24,4 +24,4 @@ EXPOSE 5024
 ENV PYTHONUNBUFFERED=1
 
 # Run the server
-CMD ["python", "chat_server.py"]
+CMD ["gunicorn", "-k", "gevent", "--worker-connections", "1000", "-w", "2", "-b", "0.0.0.0:5024", "chat_server:app"]

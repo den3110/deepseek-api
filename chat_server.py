@@ -484,4 +484,4 @@ if __name__ == '__main__':
     print("🚀 DeepSeek Chat Server starting...")
     print(f"   Token: {'✅ loaded' if AUTH_TOKEN else '❌ missing'}")
     print(f"   URL: http://localhost:5024")
-    app.run(host='0.0.0.0', port=5024, debug=True)
+    app.run(host='0.0.0.0', port=5024, debug=False)
